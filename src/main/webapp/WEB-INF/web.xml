@@ -4,21 +4,51 @@
     "http://java.sun.com/dtd/web-app_2_3.dtd">
 
 <web-app>
-
-  <!-- Servlets -->
-  <servlet>
-    <servlet-name>greetServlet</servlet-name>
-    <servlet-class>frontend.server.GreetingServiceImpl</servlet-class>
-  </servlet>
-
-  <servlet-mapping>
-    <servlet-name>greetServlet</servlet-name>
-    <url-pattern>/ImagesGallery/greet</url-pattern>
-  </servlet-mapping>
+      <context-param>
+        <!-- max size of the upload request -->
+        <param-name>maxSize</param-name>
+        <param-value>31457280</param-value>
+    </context-param>
+    <context-param>
+        <!-- Useful in development mode to slow down the uploads in fast networks.
+                 Put the number of milliseconds to sleep in each block received in the server.
+                 false or 0, means don't use slow uploads    -->
+        <param-name>slowUploads</param-name>
+        <param-value>50</param-value>
+    </context-param>
 
   <!-- Default page to serve -->
   <welcome-file-list>
     <welcome-file>ImagesGallery.html</welcome-file>
   </welcome-file-list>
+  
+  <!-- Servlets -->
+  <servlet>
+    <servlet-name>uploadServlet</servlet-name>
+    <servlet-class>frontend.server.UploaderServlet</servlet-class>
+    <!-- servlet-class>gwtupload.server.UploadServlet</servlet-class -->
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>uploadServlet</servlet-name>
+    <url-pattern>*.gupld</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+  	<servlet-name>ImagesGalleryService</servlet-name>
+  	<servlet-class>frontend.server.ImagesGalleryServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+  	<servlet-name>ImagesGalleryService</servlet-name>
+  	<url-pattern>/imagesgallery/ImagesGalleryService</url-pattern>
+  </servlet-mapping>
+  <servlet>
+  	<servlet-name>ImagesGalleryOptionsService</servlet-name>
+  	<servlet-class>frontend.server.ImagesGalleryOptionsServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+  	<servlet-name>ImagesGalleryOptionsService</servlet-name>
+  	<url-pattern>/imagesgallery/ImagesGalleryOptionsService</url-pattern>
+  </servlet-mapping>
 
 </web-app>

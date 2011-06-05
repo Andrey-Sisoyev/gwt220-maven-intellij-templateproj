@@ -32,3 +32,24 @@ h1 {
 #closeButton {
   margin: 15px 6px 6px;
 }
+
+/** Set ids using widget.getElement().setId("idOfElement") */
+.error {
+  colour: red;
+  font-weight: bold;
+}
+
+.success {
+  colour: green;
+  font-weight: bold;
+}
+
+.thumbnail {
+  margin: 20px;
+  border: thick;
+  border-color: green;
+}
+
+.GWTUpld .changed {
+    font-weight: bold;
+}

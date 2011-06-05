@@ -1,150 +1,221 @@
 package frontend.client;
 
-import com.google.gwt.i18n.client.Messages;
-import frontend.shared.FieldVerifier;
-import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
-import com.google.gwt.event.dom.client.KeyCodes;
-import com.google.gwt.event.dom.client.KeyUpEvent;
-import com.google.gwt.event.dom.client.KeyUpHandler;
+import com.google.gwt.user.cellview.client.CellTable;
+import com.google.gwt.user.cellview.client.HasKeyboardSelectionPolicy;
+import com.google.gwt.user.cellview.client.SimplePager;
+import com.google.gwt.user.cellview.client.TextColumn;
 import com.google.gwt.user.client.rpc.AsyncCallback;
-import com.google.gwt.user.client.ui.Button;
-import com.google.gwt.user.client.ui.DialogBox;
-import com.google.gwt.user.client.ui.HTML;
-import com.google.gwt.user.client.ui.Label;
-import com.google.gwt.user.client.ui.RootPanel;
-import com.google.gwt.user.client.ui.TextBox;
-import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.*;
+import com.google.gwt.view.client.ListDataProvider;
+import com.google.gwt.view.client.SelectionChangeEvent;
+import com.google.gwt.view.client.SingleSelectionModel;
+import frontend.shared.ImageFEObject;
+import utils.frontend.client.ErrorsControl;
+import utils.frontend.client.SimpleFormStateMachine;
+import utils.frontend.client.SimpleOperationTypeMachine;
 
-/**
- * Entry point classes define <code>onModuleLoad()</code>.
- */
-public class ImagesGallery implements EntryPoint {
-  /**
-   * The message displayed to the user when the server cannot be reached or
-   * returns an error.
-   */
-  private static final String SERVER_ERROR = "An error occurred while "
-      + "attempting to contact the server. Please check your network "
-      + "connection and try again.";
+import java.util.List;
 
-  /**
-   * Create a remote service proxy to talk to the server-side Greeting service.
-   */
-  private final GreetingServiceAsync greetingService = GWT.create(GreetingService.class);
+public class ImagesGallery {
+    private static int CFG__TABLE_WIDTH = 500;
+    private static int CFG__TABLE_HEIGHT = 350;
+    private static int CFG__IMG_WIDTH = 400; // TODO: externalize
 
-  private final Messages messages = GWT.create(Messages.class);
+    /**
+     * The message displayed to the user when the server cannot be reached or
+     * returns an error.
+     */
+    private static final String SERVER_ERROR = "An error occurred while "
+            + "attempting to contact the server. Please check your network "
+            + "connection and try again.";
 
-  /**
-   * This is the entry point method.
-   */
-  public void onModuleLoad() {
-    final Button sendButton = new Button( "sendButton" );
-    final TextBox nameField = new TextBox();
-    nameField.setText( "nameField" );
-    final Label errorLabel = new Label();
+    private static final String ERR__NoImages = "No images in DB";
+    private static final String ERR__NoErrors = "No errors";
 
-    // We can add style names to widgets
-    sendButton.addStyleName("sendButton");
+    // ==================================
+    // COMMUNICATION WITH SERVER
+    public static class CommunicationsWithServer {
+        private final ImagesGalleryServiceAsync galleryService = GWT.create(ImagesGalleryService.class);
+        private final ImagesGalleryOptionsServiceAsync optionsService = GWT.create(ImagesGalleryOptionsService.class);
 
-    // Add the nameField and sendButton to the RootPanel
-    // Use RootPanel.get() to get the entire body element
-    RootPanel.get("nameFieldContainer").add(nameField);
-    RootPanel.get("sendButtonContainer").add(sendButton);
-    RootPanel.get("errorLabelContainer").add(errorLabel);
-
-    // Focus the cursor on the name field when the app loads
-    nameField.setFocus(true);
-    nameField.selectAll();
-
-    // Create the popup dialog box
-    final DialogBox dialogBox = new DialogBox();
-    dialogBox.setText("Remote Procedure Call");
-    dialogBox.setAnimationEnabled(true);
-    final Button closeButton = new Button("Close");
-    // We can set the id of a widget by accessing its Element
-    closeButton.getElement().setId("closeButton");
-    final Label textToServerLabel = new Label();
-    final HTML serverResponseLabel = new HTML();
-    VerticalPanel dialogVPanel = new VerticalPanel();
-    dialogVPanel.addStyleName("dialogVPanel");
-    dialogVPanel.add(new HTML("<b>Sending name to the server:</b>"));
-    dialogVPanel.add(textToServerLabel);
-    dialogVPanel.add(new HTML("<br><b>Server replies:</b>"));
-    dialogVPanel.add(serverResponseLabel);
-    dialogVPanel.setHorizontalAlignment(VerticalPanel.ALIGN_RIGHT);
-    dialogVPanel.add(closeButton);
-    dialogBox.setWidget(dialogVPanel);
-
-    // Add a handler to close the DialogBox
-    closeButton.addClickHandler(new ClickHandler() {
-      public void onClick(ClickEvent event) {
-        dialogBox.hide();
-        sendButton.setEnabled(true);
-        sendButton.setFocus(true);
-      }
-    });
-
-    // Create a handler for the sendButton and nameField
-    class MyHandler implements ClickHandler, KeyUpHandler {
-      /**
-       * Fired when the user clicks on the sendButton.
-       */
-      public void onClick(ClickEvent event) {
-        sendNameToServer();
-      }
-
-      /**
-       * Fired when the user types in the nameField.
-       */
-      public void onKeyUp(KeyUpEvent event) {
-        if (event.getNativeKeyCode() == KeyCodes.KEY_ENTER) {
-          sendNameToServer();
+        public ImagesGalleryServiceAsync getGalleryService() {
+            return galleryService;
         }
-      }
-
-      /**
-       * Send the name from the nameField to the server and wait for a response.
-       */
-      private void sendNameToServer() {
-        // First, we validate the input.
-        errorLabel.setText("");
-        String textToServer = nameField.getText();
-        if (!FieldVerifier.isValidName(textToServer)) {
-          errorLabel.setText("Please enter at least four characters");
-          return;
+        public ImagesGalleryOptionsServiceAsync getOptionsService() {
+            return optionsService;
         }
-
-        // Then, we send the input to the server.
-        sendButton.setEnabled(false);
-        textToServerLabel.setText(textToServer);
-        serverResponseLabel.setText("");
-        greetingService.greetServer(textToServer, new AsyncCallback<String>() {
-          public void onFailure(Throwable caught) {
-            // Show the RPC error message to the user
-            dialogBox.setText("Remote Procedure Call - Failure");
-            serverResponseLabel.addStyleName("serverResponseLabelError");
-            serverResponseLabel.setHTML(SERVER_ERROR);
-            dialogBox.center();
-            closeButton.setFocus(true);
-          }
-
-          public void onSuccess(String result) {
-            dialogBox.setText("Remote Procedure Call");
-            serverResponseLabel.removeStyleName("serverResponseLabelError");
-            serverResponseLabel.setHTML(result);
-            dialogBox.center();
-            closeButton.setFocus(true);
-          }
-        });
-      }
     }
 
-    // Add a handler to send the name to the server
-    MyHandler handler = new MyHandler();
-    sendButton.addClickHandler(handler);
-    nameField.addKeyUpHandler(handler);
-  }
+    private final CommunicationsWithServer comWithServer = new CommunicationsWithServer();
+
+    // ==================================
+    // CONTROLS
+
+    final ErrorsControl ctrlViewErrors = new ErrorsControl();
+
+    final Panel panRootWithErrors = new VerticalPanel();
+    final Panel panRoot     = new HorizontalPanel();
+    final Panel panCrudoComplect
+                            = new VerticalPanel();
+    final Panel panControls = new VerticalPanel();
+    final Panel panCrudoButtons = new HorizontalPanel();
+
+    final Panel panTable = new VerticalPanel();
+
+    private final CellTable<ImageFEObject> tabImages = new CellTable<ImageFEObject>(); // content set dynamically
+    private final SimplePager simplePager = new SimplePager();
+    private final SingleSelectionModel<ImageFEObject> tabImagesSelectionModel = new SingleSelectionModel<ImageFEObject>();
+    private final Panel panSplitBetweenTableAndImage = new SimplePanel();
+    private final Panel panImage = new SimplePanel(); // content set dynamically
+    private final Button btnRefresh    = new Button("Refresh table");
+
+    SimpleFormStateMachine machSimpleFormState = new SimpleFormStateMachine() {
+        @Override protected void onFormCommit() { machOperationsType.commitOperation(); }
+    };
+    private final SimpleOperationTypeMachine<ImageFEObject> machOperationsType =
+            new SimpleOperationTypeMachine<ImageFEObject>(machSimpleFormState, panCrudoButtons);
+
+    // ================================
+    // CONSTRUCTORS
+
+
+    public void onModuleLoad() {
+        final ImagesGallery SUPER_THIS = this;
+
+        // ==================================
+        // LAYOUT
+
+        // panRoot gets added to the RootPanel after all the setup is done
+
+        panRootWithErrors.add(ctrlViewErrors.getLbErrors());
+        panRootWithErrors.add(panRoot);
+
+        panRoot.add(panCrudoComplect);
+        panRoot.add(panSplitBetweenTableAndImage);
+        panRoot.add(panImage);
+
+        panCrudoComplect.add(panTable);
+        panCrudoComplect.add(panTable);
+        panCrudoComplect.add(panControls);
+
+        panControls.add(panCrudoButtons);
+        panCrudoButtons.add(btnRefresh);
+        panControls.add(machSimpleFormState.getRootFormPanel());
+
+        panTable.add(tabImages);
+        panTable.add(simplePager);
+
+        // ==================================
+        // CONTROLS STYLES AND INITIAL CONTENTS
+        for(ImagesGalleryOperationType opType : ImagesGalleryOperationType.values())
+            this.machOperationsType.addOperation(opType.getFormOperation(this));
+
+        panTable.setWidth(CFG__TABLE_WIDTH + "px");
+        panTable.setHeight(CFG__TABLE_HEIGHT + "px");
+
+        panSplitBetweenTableAndImage.setWidth("10px");
+        panSplitBetweenTableAndImage.setHeight("1px");
+
+        // table
+        tabImages.setKeyboardSelectionPolicy(HasKeyboardSelectionPolicy.KeyboardSelectionPolicy.ENABLED);
+
+        TextColumn<ImageFEObject> colImageId = new TextColumn<ImageFEObject>() {
+            @Override public String getValue(ImageFEObject object) { return String.valueOf(object.getId()); }
+        };
+        TextColumn<ImageFEObject> colImageTitle = new TextColumn<ImageFEObject>() {
+            @Override public String getValue(ImageFEObject object) { return object.getTitle(); }
+        };
+        TextColumn<ImageFEObject> colImageURL = new TextColumn<ImageFEObject>() {
+            @Override public String getValue(ImageFEObject object) { return object.getUrl(); }
+        };
+        tabImages.addColumn(colImageId, "Id");
+        tabImages.addColumn(colImageTitle, "Title");
+        tabImages.addColumn(colImageURL, "Url");
+
+        simplePager.setDisplay(tabImages);
+        simplePager.setPageSize(5);
+        final ListDataProvider<ImageFEObject> dataProvider = new ListDataProvider<ImageFEObject>();
+        dataProvider.addDataDisplay(tabImages);
+
+        // ==================================
+        // CONTROLS BEHAVIOUR
+
+        // Add a selection model to handle user selection.
+        tabImages.setSelectionModel(tabImagesSelectionModel);
+        tabImagesSelectionModel.addSelectionChangeHandler(new SelectionChangeEvent.Handler() {
+            public void onSelectionChange(SelectionChangeEvent event) {
+                ImageFEObject selected = tabImagesSelectionModel.getSelectedObject();
+                if (selected != null) {
+                    SUPER_THIS.showImage(selected.getUrl());
+                    // sharing single image between different URLs shows strange blinking in firefox
+                }
+            }
+        });
+
+        btnRefresh.addClickHandler(new ClickHandler(){
+            public void onClick(ClickEvent event) {
+                // TODO add loading animation
+                AsyncCallback<List<ImageFEObject>> getFirstRowsAsync = new AsyncCallback<List<ImageFEObject>>() {
+
+                    @Override public void onFailure(Throwable caught) {
+                        SUPER_THIS.getViewErrorsControl().addError(caught);
+                    }
+
+                    @Override public void onSuccess(List<ImageFEObject> result) {
+                        tabImages.setRowData(0, result);
+                        tabImages.setRowCount(result.size(), true);
+                        tabImages.redraw();
+
+                        dataProvider.setList(result);
+                    }
+                };
+
+                SUPER_THIS.getCommunicationWithServer().getGalleryService().findAllSorted(getFirstRowsAsync);
+            }
+        });
+
+        // ==================================
+        // FINISH
+        RootPanel.get("mainPanelContainer").add(panRootWithErrors);
+        this.refreshTable();
+    }
+
+    // ================================
+    // GETTERS/SETTERS
+    public ImageFEObject getSelectedImage() {
+        return tabImagesSelectionModel.getSelectedObject();
+    }
+
+    public CommunicationsWithServer getCommunicationWithServer() {
+        return this.comWithServer;
+    }
+
+    public ErrorsControl getViewErrorsControl() {
+        return this.ctrlViewErrors;
+    }
+
+    public SimpleFormStateMachine getMachSimpleFormState() {
+        return machSimpleFormState;
+    }
+
+
+    // ================================
+    // METHODS
+    public void refreshTable() {
+        btnRefresh.click();
+    }
+
+    public void showImage(String url) {
+        Image img = new Image(url);
+        img.setWidth(CFG__IMG_WIDTH + "px");
+        panImage.clear();
+        panImage.add(img);
+    }
+
+    // ================================
+    // LOW-LEVEL OVERRIDES
+
 }

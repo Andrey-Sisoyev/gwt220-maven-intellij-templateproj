@@ -14,8 +14,8 @@
     <!-- Convenience property to set the GWT version -->
     <gwtVersion>2.2.0</gwtVersion>
     <!-- GWT needs at least java 1.5 -->
-    <maven.compiler.source>1.5</maven.compiler.source>
-    <maven.compiler.target>1.5</maven.compiler.target>
+    <maven.compiler.source>1.6</maven.compiler.source>
+    <maven.compiler.target>1.6</maven.compiler.target>
     <webappDirectory>${project.build.directory}/${project.build.finalName}</webappDirectory>
   </properties>
 
@@ -31,12 +31,17 @@
       <artifactId>gwt-user</artifactId>
       <version>${gwtVersion}</version>
       <scope>provided</scope>
-    </dependency>  
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.7</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.googlecode.gwtupload</groupId>
+      <artifactId>gwtupload</artifactId>
+      <version>0.6.3-compat</version>
     </dependency>
   </dependencies>
 
@@ -53,20 +58,24 @@
         <version>2.2.0</version>
         <executions>
           <execution>
+            <!-- configuration>
+              <module>com.mycompany.gwt.Module</module>
+            </configuration -->
+
             <goals>
               <goal>compile</goal>
-              <goal>test</goal>
-              <goal>i18n</goal>
-              <goal>generateAsync</goal>
+              <!-- goal>test</goal -->
+              <!-- goal>i18n</goal -->
+              <!-- goal>generateAsync</goal -->
             </goals>
           </execution>
         </executions>
-        <!-- Plugin configuration. There are many available options, see gwt-maven-plugin 
+        <!-- Plugin configuration. There are many available options, see gwt-maven-plugin
           documentation at codehaus.org -->
         <configuration>
           <runTarget>ImagesGallery.html</runTarget>
           <hostedWebapp>${webappDirectory}</hostedWebapp>
-          <i18nMessagesBundle>frontend.client.Messages</i18nMessagesBundle>
+          <!-- i18nMessagesBundle>frontend.client.Messages</i18nMessagesBundle -->
         </configuration>
       </plugin>
 
